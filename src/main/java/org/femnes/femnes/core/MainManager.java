@@ -47,7 +47,7 @@ public abstract class MainManager {
 
     private static final int ROM_SIZE = 0x8000;
     private static final byte[] rom = new byte[ROM_SIZE];
-    private static final byte[] ram = new byte[0x4000];
+    private static final byte[] ram = new byte[0x400];
 
     private static final ACIA acia = new ACIA();
     private static final VIA  via  = new VIA();
@@ -67,6 +67,19 @@ public abstract class MainManager {
     public static volatile boolean paused  = true;
     public static volatile boolean step    = false;
     public static volatile boolean reset   = true;
+
+
+    public static boolean enable_cat65 = true;
+
+
+    private static final int INES_HEADER_SIZE = 16;
+    private static final int PRG_BANK_SIZE = 16 * 1024; // 16 KiB
+    private static final int CHR_BANK_SIZE = 8 * 1024;  // 8 KiB
+    private static final int TRAINER_SIZE = 512;
+
+
+
+
 
     public static CPU getCpu() {
         return cpu;
@@ -173,7 +186,7 @@ public abstract class MainManager {
     public static int get(int address, boolean internal) {
 
 
-        if (true){
+        if (enable_cat65 == false){
             address &= 0xffff;
             return 0xff & (switch (address >> 12) {
                 case 0x0,0x1     -> ram[address & 0x07ff];
@@ -198,7 +211,7 @@ public abstract class MainManager {
     }
     public static void set(int address, int value, boolean internal) {
 
-        if (true){
+        if (enable_cat65 == false){
             address &= 0xffff;
             value &= 0xff;
             switch (address >> 12) {
@@ -300,6 +313,88 @@ public abstract class MainManager {
         if (index < file.length) {
             System.err.printf("[!] Warning! This file has %d unused bytes left over\n", file.length - index);
         }
+        reset = true;
+    }
+
+
+
+
+    private static void loadINes(byte[] file) {
+        System.out.println("[#] loading .nes (iNES) file");
+
+        if (file == null || file.length < INES_HEADER_SIZE) {
+            System.err.println("[!] Error: file is too small to contain a valid iNES header!");
+            return;
+        }
+
+        // 1. Verify magic header: 'N', 'E', 'S', 0x1A
+        if (file[0x00] != 'N' || file[0x01] != 'E' || file[0x02] != 'S' || file[0x03] != 0x1A) {
+            System.err.println("[!] Error: invalid iNES magic header!");
+            return;
+        }
+
+        int prgBanks = Byte.toUnsignedInt(file[0x04]);
+        int chrBanks = Byte.toUnsignedInt(file[0x05]);
+        int flags6 = Byte.toUnsignedInt(file[0x06]);
+        int flags7 = Byte.toUnsignedInt(file[0x07]);
+
+        boolean verticalMirroring = (flags6 & 0x01) != 0;
+        boolean hasBatteryRam = (flags6 & 0x02) != 0;
+        boolean hasTrainer = (flags6 & 0x04) != 0;
+        boolean fourScreenVram = (flags6 & 0x08) != 0;
+
+        // Guard against old "DiskDude!" / junk headers in bytes 7..15 when not NES 2.0
+        boolean isNes2 = (flags7 & 0x0C) == 0x08;
+        boolean isStandardINes = (flags7 & 0x0C) == 0x00
+                && file[12] == 0 && file[13] == 0 && file[14] == 0 && file[15] == 0;
+
+        int mapperLow = (flags6 >>> 4) & 0x0F;
+        int mapperHigh = (isNes2 || isStandardINes) ? ((flags7 >>> 4) & 0x0F) : 0;
+        int mapperId = (mapperHigh << 4) | mapperLow;
+
+        System.out.printf("[*] Mapper: %d | PRG: %d x 16KiB | CHR: %d x 8KiB | Trainer: %s%n",
+                mapperId, prgBanks, chrBanks, hasTrainer ? "yes" : "no");
+
+        // Configure mirroring / cart hardware flags if your emulator tracks them
+        // MirroringMode.set(fourScreenVram ? FOUR_SCREEN : (verticalMirroring ? VERTICAL : HORIZONTAL));
+        // BatteryRam.setEnabled(hasBatteryRam);
+
+        int index = INES_HEADER_SIZE;
+
+        // 2. Skip optional 512-byte trainer
+        if (hasTrainer) {
+            if (index + TRAINER_SIZE > file.length) {
+                System.err.println("[!] Warning! Truncated trainer data in .nes file!");
+            }
+            index += TRAINER_SIZE;
+        }
+
+        // 3. Load PRG-ROM
+        int prgSize = prgBanks * PRG_BANK_SIZE;
+        byte[] prgRom = new byte[prgSize];
+        for (int i = 0; i < prgSize; i++) {
+            prgRom[i] = (index < file.length) ? file[index] : 0x00;
+            index++;
+        }
+        if (index - (hasTrainer ? INES_HEADER_SIZE + TRAINER_SIZE : INES_HEADER_SIZE) < prgSize) {
+            System.err.println("[!] Warning! .nes file ended early while reading PRG-ROM!");
+        }
+
+        // 4. Load CHR-ROM (or allocate CHR-RAM if chrBanks == 0)
+        int chrSize = (chrBanks > 0) ? (chrBanks * CHR_BANK_SIZE) : CHR_BANK_SIZE;
+        byte[] chrRom = new byte[chrSize];
+        if (chrBanks > 0) {
+            for (int i = 0; i < chrSize; i++) {
+                chrRom[i] = (index < file.length) ? file[index] : 0x00;
+                index++;
+            }
+        }
+
+        // Assign to your emulator fields (e.g., this.prgRom = prgRom; this.chrRom = chrRom; this.mapper = mapperId;)
+        if (index < file.length) {
+            System.err.printf("[!] Warning! This file has %d unused bytes left over%n", file.length - index);
+        }
+
         reset = true;
     }
 }
