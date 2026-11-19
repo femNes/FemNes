@@ -1,0 +1,26 @@
+package org.femnes.femnes.core.cpu;
+
+class TestBus implements Bus {
+    final int[] memory = new int[0x10000];
+
+    public boolean irq = false;
+    public boolean nmi = false;
+
+    @Override
+    public int read(int address) {
+        return memory[address & 0xffff];
+    }
+    @Override
+    public void write(int address, int value) {
+        memory[address & 0xffff] = value & 0xff;
+    }
+
+    @Override
+    public boolean getIRQ() {
+        return !irq;
+    }
+    @Override
+    public boolean getNMI() {
+        return !nmi;
+    }
+}

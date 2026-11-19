@@ -1,0 +1,30 @@
+package org.femnes.femnes.window;
+
+import javafx.stage.Stage;
+import org.femnes.femnes.core.MainManager;
+
+public abstract class WindowController {
+    protected final Window window;
+
+    public WindowController(String title, String fxml) {
+        this(title, fxml, null);
+    }
+    public WindowController(String title, String fxml, Stage stage) {
+        this.window = new Window(title, fxml, this, stage);
+    }
+
+    public void updateWindow() {}
+
+    public void onClose() {
+        MainManager.mainWindowController.closeWindow(this);
+    }
+
+    public Window getWindow() {
+        return window;
+    }
+
+    @Override
+    public String toString() {
+        return "%s (%s)".formatted(window.getStage().getTitle(), super.toString());
+    }
+}
