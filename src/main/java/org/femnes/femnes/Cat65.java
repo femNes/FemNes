@@ -6,7 +6,7 @@ import org.femnes.femnes.core.AudioManager;
 import org.femnes.femnes.core.MainManager;
 
 public class Cat65 extends Application {
-    public static final String RESOURCE_PATH = "/org/kittykat/cat65/";
+    public static final String RESOURCE_PATH = "/org/femnes/femnes/";
 
     @Override
     public void stop() {
