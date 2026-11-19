@@ -5,7 +5,7 @@ import javafx.stage.Stage;
 import org.femnes.femnes.core.AudioManager;
 import org.femnes.femnes.core.MainManager;
 
-public class Cat65 extends Application {
+public class FemNes extends Application {
     public static final String RESOURCE_PATH = "/org/femnes/femnes/";
 
     @Override

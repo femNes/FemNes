@@ -13,6 +13,6 @@ public class Launcher {
         });
 
         Locale.setDefault(Locale.ENGLISH);
-        Application.launch(Cat65.class, args);
+        Application.launch(FemNes.class, args);
     }
 }

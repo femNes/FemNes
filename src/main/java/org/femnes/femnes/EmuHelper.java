@@ -24,12 +24,12 @@ public abstract class EmuHelper {
     private static final String[] NOTES = {"C ", "C#", "D ", "D#", "E ", "F ", "F#", "G ", "G#", "A ", "A#", "B "};
 
     public static URL loadResource(String path) {
-        return EmuHelper.class.getResource("%s%s".formatted(Cat65.RESOURCE_PATH, path));
+        return EmuHelper.class.getResource("%s%s".formatted(FemNes.RESOURCE_PATH, path));
     }
     public static byte[] readResourceFile(String path) throws IOException {
-        try (InputStream in = EmuHelper.class.getResourceAsStream(Cat65.RESOURCE_PATH + path)) {
+        try (InputStream in = EmuHelper.class.getResourceAsStream(FemNes.RESOURCE_PATH + path)) {
             if (in == null) {
-                throw new FileNotFoundException("\"%s%s\" does not exist!".formatted(Cat65.RESOURCE_PATH, path));
+                throw new FileNotFoundException("\"%s%s\" does not exist!".formatted(FemNes.RESOURCE_PATH, path));
             }
             return in.readAllBytes();
         }

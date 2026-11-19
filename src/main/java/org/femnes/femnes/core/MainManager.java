@@ -5,9 +5,7 @@ import org.femnes.femnes.core.cpu.Bus;
 import org.femnes.femnes.core.cpu.CPU;
 import org.femnes.femnes.core.expansion.ExpansionData;
 import org.femnes.femnes.core.expansion.ExpansionManager;
-import org.femnes.femnes.core.extraChips.ACIA;
-import org.femnes.femnes.core.extraChips.LCD;
-import org.femnes.femnes.core.extraChips.VIA;
+import org.femnes.femnes.core.extraChips.*;
 import org.femnes.femnes.settings.ExpansionPort;
 import org.femnes.femnes.window.MainWindowController;
 
@@ -55,6 +53,10 @@ public abstract class MainManager {
     private static final VIA  via  = new VIA();
     private static final LCD  lcd  = new LCD();
     private static final CPU  cpu  = new CPU(bus);
+
+    private static final PPU ppu  = new PPU();
+    private static final APU apu  = new APU();
+
 
     public static MainWindowController mainWindowController;
 
@@ -169,25 +171,56 @@ public abstract class MainManager {
     }
 
     public static int get(int address, boolean internal) {
-        address &= 0xffff;
-        return 0xff & (switch (address >> 12) {
-            case 0x0,0x1,0x2,0x3 -> ram[address];
-            case 0x4,0x7         -> ExpansionManager.get(address, internal);
-            case 0x5             -> acia.read(address - 0x5000, internal);
-            case 0x6             -> via.read(address - 0x6000, internal);
-            default              -> rom[address - 0x8000];
-        });
+
+
+        if (true){
+            address &= 0xffff;
+            return 0xff & (switch (address >> 12) {
+                case 0x0,0x1     -> ram[address & 0x07ff];
+                case 0x2,0x3     -> ppu.read(address - 0x2000, internal);
+                case 0x4         -> apu.read(address - 0x4000, internal);
+                case 0x5,0x6,0x7 -> 0x00;  // ToDo: replace with other stuff
+                default          -> rom[address - 0x8000];
+            });
+        } else {
+
+            // Cat65 Leftover code
+            // DO NOT REMOVE
+            address &= 0xffff;
+            return 0xff & (switch (address >> 12) {
+                case 0x0, 0x1, 0x2, 0x3 -> ram[address];
+                case 0x4, 0x7 -> ExpansionManager.get(address, internal);
+                case 0x5 -> acia.read(address - 0x5000, internal);
+                case 0x6 -> via.read(address - 0x6000, internal);
+                default -> rom[address - 0x8000];
+            });
+        }
     }
     public static void set(int address, int value, boolean internal) {
-        address &= 0xffff;
-        value &= 0xff;
-        switch (address >> 12) {
-            case 0x0,0x1,0x2,0x3 -> ram[address] = (byte) value;
-            case 0x4,0x7         -> ExpansionManager.set(address, value, internal);
-            case 0x5             -> acia.write(address - 0x5000, value, internal);
-            case 0x6             -> via.write(address - 0x6000, value, internal);
-            default -> {
-                 if (!internal) rom[address - 0x8000] = (byte) value;
+
+        if (true){
+            address &= 0xffff;
+            value &= 0xff;
+            switch (address >> 12) {
+                case 0x0,0x1         -> ram[address & 0x07ff] = (byte) value;
+                case 0x2,0x3         -> ppu.write(address - 0x2000, value, internal);
+                case 0x4             -> apu.write(address - 0x4000, value, internal);
+                case 0x8,0x9,0xa,0xb,
+                    0xc,0xd,0xe,0xf -> {
+                    if (!internal) rom[address - 0x8000] = (byte) value;
+                }
+            }
+        }else {
+            address &= 0xffff;
+            value &= 0xff;
+            switch (address >> 12) {
+                case 0x0, 0x1, 0x2, 0x3 -> ram[address] = (byte) value;
+                case 0x4, 0x7 -> ExpansionManager.set(address, value, internal);
+                case 0x5 -> acia.write(address - 0x5000, value, internal);
+                case 0x6 -> via.write(address - 0x6000, value, internal);
+                default -> {
+                    if (!internal) rom[address - 0x8000] = (byte) value;
+                }
             }
         }
     }
